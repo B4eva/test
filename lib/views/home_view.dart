@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:camera/camera.dart';
+
 import '../main.dart';
 
 class HomePage extends StatefulWidget {
@@ -11,8 +13,63 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String imageUrl =
-      'https://media.istockphoto.com/photos/happy-adult-man-walking-sunny-city-street-sidewalk-picture-id1310533208';
+  CameraController? controller;
+  List? cameras = [];
+  int? selectedCameraIdx;
+  String? imagePath;
+
+  @override
+  void initState() {
+    super.initState();
+
+    availableCameras()
+        .then((availableCameras) => () {
+              cameras = availableCameras;
+              if (cameras!.isNotEmpty) {
+                setState(() {
+                  selectedCameraIdx = 0;
+                });
+                _initCameraController(cameras![selectedCameraIdx!])
+                    .then((void v) {});
+              } else {
+                print('No camera');
+              }
+              print('this are the cameras number $cameras');
+            })
+        .catchError((err) {
+      print(' $err THIS ERROR');
+    });
+  }
+
+  Future _initCameraController(CameraDescription cameraDescription) async {
+    if (controller != null) {
+      await controller!.dispose();
+    }
+
+    controller = CameraController(cameraDescription, ResolutionPreset.high);
+    // the controller is updated then update the ui
+
+    controller!.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+      if (controller!.value.hasError) {
+        print('camera error ${controller!.value.errorDescription}');
+      }
+    });
+    try {
+      await controller!.initialize();
+    } on CameraException catch (e) {
+      _showCameraException(e);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  // String imageUrl =
+  //     'https://media.istockphoto.com/photos/happy-adult-man-walking-sunny-city-street-sidewalk-picture-id1310533208';
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +114,12 @@ class _HomePageState extends State<HomePage> {
 
   Widget _camaraToggleRowWidget() {
     return Spacer();
+  }
+
+  void _showCameraException(CameraException e) {
+    String errorText = 'Error: ${e.code}\nError message: ${e.description}';
+    print(errorText);
+    print('Error: ${e.code}\n ${e.description}');
   }
 
   Widget _captureControlRowWidget(BuildContext context) {
